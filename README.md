@@ -1,3 +1,3 @@
 # ocp-templates
 
-[deployment.yaml](../blob/master/deployment.yaml)
+[deployment.yaml](../master/deployment.yaml)
