@@ -1,3 +1,7 @@
 # ocp-templates
 
-[deployment.yaml](../master/deployment.yaml)
+
+
+| Tables                             | Description                              |
+| ---------------------------------- |:----------------------------------------:| 
+| [deployment.yaml](../master/deployment.yaml) | This template gives a jump start for a OCP deployment. |
