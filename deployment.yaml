@@ -1,0 +1,123 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  annotations:
+    description: Basic deployment of a container deployment
+  name: example-app
+
+parameters:
+- name: NAME
+  required: true
+  value: example-app
+- name: IMAGE
+  required: true
+  value: openshift/hello-openshift
+- name: IMAGE_PULL_POLICY
+  required: true
+  value: IfNotPresent
+- name: CPU_REQUEST
+  required: true
+  value: 10m
+- name: CPU_LIMIT
+  required: true
+  value: 500m
+- name: MEMORY_REQUEST
+  required: true
+  value: 128Mi
+- name: MEMORY_LIMIT
+  required: true
+  value: 128Mi
+
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      name: ${NAME}
+
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${NAME}
+    name: ${NAME}
+  spec:
+    to:
+      kind: Service
+      name: ${NAME}
+      weight: 100
+    port:
+      targetPort: http
+
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ${NAME}-cm
+  data:
+    example.property.1: hello
+    example.property.2: world
+    example.property: |-                                                  # add multiple properties to a config file
+      property.1=value-1
+      property.2=value-2
+      property.3=value-3
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    labels:
+      name: ${NAME}
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        name: ${NAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          name: ${NAME}
+      spec:
+        containers:
+        - name: ${NAME}-app
+          image: ${IMAGE}                                                 # specify container image
+          imagePullPolicy: ${IMAGE_PULL_POLICY}
+          env:                                                            # set env variables
+          - name: STATIC_DNS_NAME
+            value: "host111"
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources:                                                      # limit OCP resources
+            requests:
+              cpu: ${CPU_REQUEST}
+              memory: ${MEMORY_REQUEST}
+            limits:
+              cpu: ${CPU_LIMIT}
+              memory: ${MEMORY_LIMIT}
+          volumeMounts:                                                    # map volume and configmaps -> mountpoints 
+          - mountPath: /tmp/data
+            name: site-data
+            subPath: data
+          - mountPath: /tmp/config
+            name: ${NAME}-cm
+            readOnly: true 
+        restartPolicy: Always  
+        volumes:                                                           # specify PVCs
+        - name: site-data
+          persistentVolumeClaim:
+            claimName: my-site-data
+        - configMap:                                                        # specify configmap
+            defaultMode: 420
+            name: ${NAME}-cm
+          name: ${NAME}-cm
